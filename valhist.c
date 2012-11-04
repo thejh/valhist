@@ -136,7 +136,12 @@ int main(int argc, char *argv[]) {
   while (1) {
     double *current_pos = rb.start;
     for (int i=0; i<number_of_columns; i++) {
-      fscanf(stdin, "%lf", &current_pos[i]);
+      double n;
+      if (fscanf(stdin, "%lf", &n) != 1) {
+        puts("fscanf fail");
+        return 1;
+      }
+      current_pos[i] = n;
     }
     /* we could optimize this because the pagesize can be divided by sizeof(double),
      * but meh, we probably don't need that performance
