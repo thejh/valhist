@@ -12,11 +12,11 @@
 #include <stdint.h>
 
 static void usage(char *argv[]) {
-  printf("invocation: %s <number_of_columns> <backlog_size> <height> <invspeed> <min1> <max1> [<min2> <max2> [...]]\n", argv[0]);
+  printf("invocation: %s <number_of_columns> <backlog_size> <height> <invspeed> <frameskip> <min1> <max1> [<min2> <max2> [...]]\n", argv[0]);
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 7) {
+  if (argc < 8) {
     usage(argv);
     return 1;
   }
@@ -24,11 +24,12 @@ int main(int argc, char *argv[]) {
   int backlog_size = atoi(argv[2]);
   int height = atoi(argv[3]);
   int invspeed = atoi(argv[4]);
-  if (argc != 5 + number_of_columns*2) {
+  int frameskip = atoi(argv[5]);
+  if (argc != 6 + number_of_columns*2) {
     usage(argv);
     return 1;
   }
-  if (number_of_columns < 1 || backlog_size < 2 || invspeed < 1) {
+  if (number_of_columns < 1 || backlog_size < 2 || invspeed < 1 || frameskip < 1) {
     puts("please use parameters that make sense, thanks");
     usage(argv);
     return 1;
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]) {
   assert(img != NULL);
   XFlush(dpy);
 
-  int invspeed_i = 0;
+  int invspeed_i = 0, frameskip_i = 0;
   
   while (1) {
     double *current_pos = rb.start;
@@ -180,8 +181,11 @@ int main(int argc, char *argv[]) {
       *(img_data+backlog_size*scaled_y+(backlog_size-1)) = 0xffffff00;
     }
     /* upload the new image */
-    img->data = (char *)img_data;
-    XPutImage(dpy, w, gc, img, 0, 0, 0, 0, backlog_size, height);
-    XFlush(dpy);
+    if (++frameskip_i == frameskip) {
+      img->data = (char *)img_data;
+      XPutImage(dpy, w, gc, img, 0, 0, 0, 0, backlog_size, height);
+      XFlush(dpy);
+      frameskip_i = 0;
+    }
   }
 }
