@@ -16,23 +16,24 @@ static void usage(char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 6) {
+  if (argc < 7) {
     usage(argv);
     return 1;
   }
   int number_of_columns = atoi(argv[1]);
   int backlog_size = atoi(argv[2]);
   int height = atoi(argv[3]);
-  if (argc != 4 + number_of_columns*2) {
+  int invspeed = atoi(argv[4]);
+  if (argc != 5 + number_of_columns*2) {
     usage(argv);
     return 1;
   }
-  if (number_of_columns < 1 || backlog_size < 2) {
+  if (number_of_columns < 1 || backlog_size < 2 || invspeed < 1) {
     puts("please use parameters that make sense, thanks");
     usage(argv);
     return 1;
   }
-  int argv_i = 4;
+  int argv_i = 5;
   
   double minvals[number_of_columns], maxvals[number_of_columns], scalevals[number_of_columns];
   for (int i=0; i<number_of_columns; i++) {
@@ -132,6 +133,8 @@ int main(int argc, char *argv[]) {
   XImage *img = XCreateImage(dpy, visual, depth, ZPixmap, 0, (char *)img_data_rb.start, backlog_size, height, 32, 4*backlog_size);
   assert(img != NULL);
   XFlush(dpy);
+
+  int invspeed_i = 0;
   
   while (1) {
     double *current_pos = rb.start;
@@ -143,21 +146,27 @@ int main(int argc, char *argv[]) {
       }
       current_pos[i] = n;
     }
+
     /* we could optimize this because the pagesize can be divided by sizeof(double),
      * but meh, we probably don't need that performance
      */
     ringbuffer_bump(&rb, sizeof(double)*number_of_columns);
-    
-    /* now update our image... */
-    /* move the image one to the left */
-    /* move everything one to the left... */
-    ringbuffer_bump(&img_data_rb, 4);
-    int *img_data = img_data_rb.start;
-    // memmove(img_data, img_data+1, backlog_size*height*4); /* this was slow; removed */
-    /* ... and make the last pixel black */
-    for (int y=0; y<height; y++) {
-      *(img_data+(backlog_size*y+backlog_size-1)) = 0;
+
+    if (invspeed_i == 0) {
+      /* now update our image... */
+      /* move the image one to the left */
+      /* move everything one to the left... */
+      ringbuffer_bump(&img_data_rb, 4);
     }
+    int *img_data = img_data_rb.start;
+    if (invspeed_i == 0) {
+      /* ... and make the last pixel black */
+      for (int y=0; y<height; y++) {
+        *(img_data+(backlog_size*y+backlog_size-1)) = 0;
+      }
+    }
+    if (++invspeed_i == invspeed) invspeed_i = 0;
+    
     /* draw the new values (at the right side) */
     for (int i=0; i<number_of_columns; i++) {
       int scaled_y = (int) round((current_pos[i]-minvals[i])*scalevals[i]);
