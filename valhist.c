@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 static void usage(char *argv[]) {
-  printf("invocation: %s <number_of_columns> <backlog_size> <height> <min1> <max1> [<min2> <max2> [...]]\n", argv[0]);
+  printf("invocation: %s <number_of_columns> <backlog_size> <height> <invspeed> <min1> <max1> [<min2> <max2> [...]]\n", argv[0]);
 }
 
 int main(int argc, char *argv[]) {
