@@ -1,4 +1,3 @@
-#include <ringbuffer.h>
 #include <sys/user.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -58,16 +57,6 @@ int main(int argc, char *argv[]) {
          "\nwill calculate on-screen corrdinate using (val-%lf)*%lf\n"
 	 "\n",
 	 i, minvals[i], maxvals[i], minvals[i], scalevals[i]);
-  }
-  
-  int required_bytes = sizeof(double)*backlog_size*number_of_columns;
-  //int page_rounded_backlog_size = ((required_bytes+PAGE_SIZE-1)/PAGE_SIZE)*PAGE_SIZE;
-  // unused atm
-  // int backlog_offset = page_rounded_backlog_size - required_bytes;
-  struct ringbuffer rb;
-  if (ringbuffer_init(&rb, required_bytes, true)) {
-    printf("Error while initializing ringbuffer: %s\n", strerror(errno));
-    return 1;
   }
   
   Display *dpy = XOpenDisplay(NULL);
@@ -141,7 +130,7 @@ int main(int argc, char *argv[]) {
   int invspeed_i = 0, frameskip_i = 0;
 
   while (1) {
-    double *current_pos = rb.start;
+    double rawvals[number_of_columns];
     for (int i=0; i<number_of_columns; i++) {
       double n;
       if (fscanf(stdin, "%lf", &n) != 1) {
@@ -149,13 +138,8 @@ int main(int argc, char *argv[]) {
         return 1;
       }
 
-      current_pos[i] = n;
+      rawvals[i] = n;
     }
-
-    /* we could optimize this because the pagesize can be divided by sizeof(double),
-     * but meh, we probably don't need that performance
-     */
-    ringbuffer_bump(&rb, sizeof(double)*number_of_columns);
 
     if (invspeed_i == 0) {
       /* now update our image... */
@@ -174,7 +158,7 @@ int main(int argc, char *argv[]) {
     
     /* draw the new values (at the right side) */
     for (int i=0; i<number_of_columns; i++) {
-      int scaled_y = (int) round((current_pos[i]-minvals[i])*scalevals[i]);
+      int scaled_y = (int) round((rawvals[i]-minvals[i])*scalevals[i]);
       int underflow;
       if ((underflow=scaled_y<0) || scaled_y>=height) {
         printf("WARNING: %s in column %i (minval is %f, scaleval is %f, resulting y is %i)\n", underflow?"underflow":"overflow", i, minvals[i], scalevals[i], scaled_y);
