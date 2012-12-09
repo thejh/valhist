@@ -1,0 +1,16 @@
+compiling: run "make"
+
+programs:
+ - `valhist` for displaying data
+ - `slowpipe` for displaying a stream of data with some throttling
+
+Usage example:
+
+    ./slowpipe 1 < log.csv | ./valhist 1 600 400 5 2 650 750
+
+What it does:
+Grab one line per millisecond from log.csv. Assume that the file has one data
+column. Create a window with a width of 600 and a height of 400 pixels. Shift
+the graph after each set of five values (meaning that there are five dots,
+possibly in the same location, per column in the graph). Draw the graph
+when you've shifted it 2 times. Assume that the values range from 650 to 750.
