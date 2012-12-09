@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
       *(img_data+backlog_size*scaled_y+(backlog_size-1)) = 0xffffff00;
     }
     /* upload the new image */
-    if (++frameskip_i == frameskip) {
+    if (invspeed_i == 1 && ++frameskip_i == frameskip) {
       img->data = (char *)img_data;
       XPutImage(dpy, w, gc, img, 0, 0, 0, 0, backlog_size, height);
       XFlush(dpy);
