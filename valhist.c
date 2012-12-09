@@ -50,7 +50,11 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     scalevals[i] = height / (maxvals[i] - minvals[i]);
-    printf("configured column %i, will calculate on-screen corrdinate using (val-%lf)*%lf\n", i, minvals[i], scalevals[i]);
+    printf("configured column %i"
+         "\nminval=%lf, maxval=%lf"
+         "\nwill calculate on-screen corrdinate using (val-%lf)*%lf\n"
+	 "\n",
+	 i, minvals[i], maxvals[i], minvals[i], scalevals[i]);
   }
   
   int required_bytes = sizeof(double)*backlog_size*number_of_columns;
@@ -173,7 +177,7 @@ int main(int argc, char *argv[]) {
       int scaled_y = (int) round((current_pos[i]-minvals[i])*scalevals[i]);
       int underflow;
       if ((underflow=scaled_y<0) || scaled_y>=height) {
-        printf("WARNING: %s in column %i (resulting y is %i)\n", underflow?"underflow":"overflow", i, scaled_y);
+        printf("WARNING: %s in column %i (minval is %f, scaleval is %f, resulting y is %i)\n", underflow?"underflow":"overflow", i, minvals[i], scalevals[i], scaled_y);
         continue;
       }
       // flip vertically (turn upside down)
