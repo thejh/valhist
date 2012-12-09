@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     usage(argv);
     return 1;
   }
-  int argv_i = 5;
+  int argv_i = 6;
   
   double minvals[number_of_columns], maxvals[number_of_columns], scalevals[number_of_columns];
   for (int i=0; i<number_of_columns; i++) {
