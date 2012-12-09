@@ -10,6 +10,9 @@
 #include <math.h>
 #include <assert.h>
 #include <stdint.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <X11/extensions/XShm.h>
 
 static void usage(char *argv[]) {
   printf("invocation: %s <number_of_columns> <backlog_size> <height> <invspeed> <frameskip> <min1> <max1> [<min2> <max2> [...]]\n", argv[0]);
@@ -122,25 +125,21 @@ int main(int argc, char *argv[]) {
     if (e.type == MapNotify)
       break;
   }
-  // so that we don't have to waste 97% CPU time on memmoves.
-  // yes, according to Valgrind, it's really that bad.
-  struct ringbuffer img_data_rb;
-  if (ringbuffer_init(&img_data_rb, backlog_size*height*4, true)) {
-    printf("image ringbuffer allocation failed\n");
-    return 1;
-  }
-  //printf("address range of img_data: %p - %p (size %i)\n", img_data, img_data+backlog_size*height, backlog_size*height*4);
-  //memset(img_data, 0, backlog_size*height*sizeof(uint32_t));
   // hmm... seems like the "depth" is not colordepth, but layers depth? see PutImage.c:742 in Xlib
   // no, it can't be!
   // GRAH, this drives me crazy!
   // hmm, seems as if I have to use ZPixmap, not XYPixmap!
-  XImage *img = XCreateImage(dpy, visual, depth, ZPixmap, 0, (char *)img_data_rb.start, backlog_size, height, 32, 4*backlog_size);
+  XShmSegmentInfo shminfo;
+  XImage *img = XShmCreateImage(dpy, visual, depth, ZPixmap, NULL, &shminfo, backlog_size, height);
   assert(img != NULL);
+  shminfo.shmid = shmget(IPC_PRIVATE, img->bytes_per_line*img->height, IPC_CREAT|0777);
+  shminfo.shmaddr = img->data = shmat(shminfo.shmid, 0, 0);
+  shminfo.readOnly = False;
+  XShmAttach(dpy, &shminfo);
   XFlush(dpy);
 
   int invspeed_i = 0, frameskip_i = 0;
-  
+
   while (1) {
     double *current_pos = rb.start;
     for (int i=0; i<number_of_columns; i++) {
@@ -149,6 +148,7 @@ int main(int argc, char *argv[]) {
         puts("fscanf fail");
         return 1;
       }
+
       current_pos[i] = n;
     }
 
@@ -161,9 +161,9 @@ int main(int argc, char *argv[]) {
       /* now update our image... */
       /* move the image one to the left */
       /* move everything one to the left... */
-      ringbuffer_bump(&img_data_rb, 4);
+      memmove(img->data, img->data+4, img->bytes_per_line*img->height-4);
     }
-    int *img_data = img_data_rb.start;
+    int *img_data = (void *)img->data;
     if (invspeed_i == 0) {
       /* ... and make the last pixel black */
       for (int y=0; y<height; y++) {
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
     /* upload the new image */
     if (invspeed_i == 1 && ++frameskip_i == frameskip) {
       img->data = (char *)img_data;
-      XPutImage(dpy, w, gc, img, 0, 0, 0, 0, backlog_size, height);
+      XShmPutImage(dpy, w, gc, img, 0, 0, 0, 0, backlog_size, height, False);
       XFlush(dpy);
       frameskip_i = 0;
     }
