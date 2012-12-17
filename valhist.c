@@ -166,7 +166,16 @@ int main(int argc, char *argv[]) {
       }
       // flip vertically (turn upside down)
       scaled_y = (height-1) - scaled_y;
-      *(img_data+backlog_size*scaled_y+(backlog_size-1)) = 0xffffff00;
+      unsigned int color;
+      switch (i % 6) {
+        case 0: color=0xffffff00; break;
+        case 1: color=0xff00ffff; break;
+        case 2: color=0xffff00ff; break;
+        case 3: color=0xffff0000; break;
+        case 4: color=0xff00ff00; break;
+        case 5: color=0xff0000ff; break;
+      }
+      *(img_data+backlog_size*scaled_y+(backlog_size-1)) = color;
     }
     /* upload the new image */
     if (invspeed_i == 1 && ++frameskip_i == frameskip) {
